@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forex Pips Calculator — Professional Trading Risk Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: rgba(30, 41, 59, 0.7);
+    --bg-input: rgba(15, 23, 42, 0.8);
+    --neon-green: #00ff88;
+    --neon-blue: #00d4ff;
+    --neon-purple: #7c3aed;
+    --accent-gold: #f59e0b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
+    --border-glow: rgba(0, 255, 136, 0.2);
+    --border-blue: rgba(0, 212, 255, 0.2);
+    --danger: #ef4444;
+    --success: #00ff88;
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── Animated chart background ── */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  /* ── Grid overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    padding: 52px 20px 36px;
+    position: relative;
+  }
+
+  .logo-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--neon-green), var(--neon-blue), var(--neon-green));
+    padding: 3px;
+    margin-bottom: 20px;
+    animation: spinLogo 6s linear infinite;
+  }
+
+  .logo-inner {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--bg-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+  }
+
+  @keyframes spinLogo {
+    to { transform: rotate(360deg); }
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(22px, 5vw, 42px);
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--neon-green) 0%, var(--neon-blue) 50%, var(--neon-green) 100%);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .subtitle {
+    font-size: 14px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--neon-green);
+    margin-top: 14px;
+    font-family: 'Orbitron', monospace;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--neon-green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── Glass panel ── */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow:
+      0 0 0 1px rgba(0,212,255,0.05),
+      0 20px 60px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: var(--transition);
+  }
+
+  .glass-panel:hover {
+    border-color: rgba(0,212,255,0.15);
+    box-shadow:
+      0 0 0 1px rgba(0,212,255,0.1),
+      0 20px 80px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,212,255,0.3), transparent);
+  }
+
+  /* ── Grid layouts ── */
+  .inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  /* ── Form fields ── */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  input, select {
+    background: var(--bg-input);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    padding: 12px 16px;
+    outline: none;
+    transition: var(--transition);
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input::placeholder { color: var(--text-muted); }
+
+  input:focus, select:focus {
+    border-color: rgba(0,212,255,0.5);
+    box-shadow:
+      0 0 0 3px rgba(0,212,255,0.1),
+      0 0 20px rgba(0,212,255,0.05);
+    background: rgba(0,212,255,0.04);
+  }
+
+  input.error {
+    border-color: rgba(239,68,68,0.5);
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2394a3b8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+    cursor: pointer;
+  }
+
+  select option { background: #1e293b; color: var(--text-primary); }
+
+  /* ── Buttons ── */
+  .buttons-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+  }
+
+  .btn {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 15px 20px;
+    transition: var(--transition);
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.2s;
+  }
+
+  .btn:hover::before { background: rgba(255,255,255,0.05); }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-green {
+    background: linear-gradient(135deg, #00ff88, #00c969);
+    color: #0f172a;
+    box-shadow: 0 0 20px rgba(0,255,136,0.3), 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .btn-green:hover { box-shadow: 0 0 35px rgba(0,255,136,0.5), 0 8px 25px rgba(0,0,0,0.4); }
+
+  .btn-blue {
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: #0f172a;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3), 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .btn-blue:hover { box-shadow: 0 0 35px rgba(0,212,255,0.5), 0 8px 25px rgba(0,0,0,0.4); }
+
+  .btn-purple {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(124,58,237,0.3), 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .btn-purple:hover { box-shadow: 0 0 35px rgba(124,58,237,0.5), 0 8px 25px rgba(0,0,0,0.4); }
+
+  .btn-reset {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #ef4444;
+  }
+  .btn-reset:hover {
+    background: rgba(239,68,68,0.25);
+    box-shadow: 0 0 20px rgba(239,68,68,0.2);
+  }
+
+  .btn-spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #0f172a;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .btn.loading .btn-label { display: none; }
+  .btn.loading .btn-spinner { display: block; }
+
+  /* ── Results cards ── */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .result-card {
+    background: var(--glass-bg);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+    opacity: 0.4;
+  }
+
+  .result-card.active {
+    opacity: 1;
+    border-color: rgba(0,255,136,0.2);
+    box-shadow:
+      0 0 0 1px rgba(0,255,136,0.1),
+      0 0 30px rgba(0,255,136,0.05),
+      inset 0 0 40px rgba(0,255,136,0.02);
+  }
+
+  .result-card.active.loss {
+    border-color: rgba(239,68,68,0.2);
+    box-shadow:
+      0 0 0 1px rgba(239,68,68,0.1),
+      0 0 30px rgba(239,68,68,0.05);
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-blue));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .result-card.active::before { opacity: 1; }
+  .result-card.active.loss::before { background: linear-gradient(90deg, #ef4444, #f97316); }
+
+  .result-icon {
+    font-size: 22px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .result-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .result-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    transition: var(--transition);
+  }
+
+  .result-value.positive { color: var(--neon-green); }
+  .result-value.negative { color: #ef4444; }
+
+  .result-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* ── Toast ── */
+  #toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(30,41,59,0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 14px;
+    min-width: 280px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    animation: slideIn 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .toast.success { border-left: 3px solid var(--neon-green); }
+  .toast.error { border-left: 3px solid #ef4444; }
+  .toast.info { border-left: 3px solid var(--neon-blue); }
+  .toast.fadeOut { animation: slideOut 0.3s ease forwards; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(40px); }
+  }
+
+  /* ── Validation message ── */
+  .field-error {
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 2px;
+    display: none;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+    z-index: 1;
+  }
+
+  footer span {
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+  }
+
+  /* ── Scan line animation on active cards ── */
+  .scan-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,255,136,0.4), transparent);
+    top: -2px;
+    left: 0;
+    animation: scan 2s linear infinite;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .result-card.active .scan-line { opacity: 1; }
+
+  @keyframes scan {
+    0% { top: 0%; }
+    100% { top: 110%; }
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    .glass-panel { padding: 20px 16px; }
+    .buttons-row { grid-template-columns: 1fr 1fr; }
+    .results-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div id="toast-container"></div>
+
+<div class="container">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo-wrapper">
+      <div class="logo-inner">📈</div>
+    </div>
+    <h1>Forex Pips Calculator</h1>
+    <div class="subtitle">Professional Trading Risk Tool</div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      Live Calculations
+    </div>
+  </header>
+
+  <!-- ── Inputs Panel ── -->
+  <div class="glass-panel">
+    <div class="panel-title">Trade Parameters</div>
+    <div class="inputs-grid">
+
+      <div class="field">
+        <label for="pair">Currency Pair</label>
+        <select id="pair">
+          <option value="EUR/USD">EUR/USD</option>
+          <option value="GBP/USD">GBP/USD</option>
+          <option value="AUD/USD">AUD/USD</option>
+          <option value="NZD/USD">NZD/USD</option>
+          <option value="USD/CAD">USD/CAD</option>
+          <option value="USD/CHF">USD/CHF</option>
+          <option value="USD/JPY">USD/JPY</option>
+          <option value="EUR/JPY">EUR/JPY</option>
+          <option value="GBP/JPY">GBP/JPY</option>
+          <option value="XAU/USD">XAU/USD (Gold)</option>
+          <option value="XAG/USD">XAG/USD (Silver)</option>
+          <option value="BTC/USD">BTC/USD</option>
+          <option value="ETH/USD">ETH/USD</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="lot-size">Lot Size</label>
+        <input id="lot-size" type="number" placeholder="e.g. 1.0" step="0.01" min="0.01">
+        <div class="field-error" id="err-lot">Enter a valid lot size</div>
+      </div>
+
+      <div class="field">
+        <label for="entry">Entry Price</label>
+        <input id="entry" type="number" placeholder="e.g. 1.08500" step="0.00001">
+        <div class="field-error" id="err-entry">Enter a valid entry price</div>
+      </div>
+
+      <div class="field">
+        <label for="exit">Exit / Stop-Loss Price</label>
+        <input id="exit" type="number" placeholder="e.g. 1.09000" step="0.00001">
+        <div class="field-error" id="err-exit">Enter a valid exit price</div>
+      </div>
+
+      <div class="field">
+        <label for="balance">Account Balance</label>
+        <input id="balance" type="number" placeholder="e.g. 10000" step="1">
+        <div class="field-error" id="err-balance">Enter a valid balance</div>
+      </div>
+
+      <div class="field">
+        <label for="risk">Risk Percentage (%)</label>
+        <input id="risk" type="number" placeholder="e.g. 2" step="0.1" min="0.1" max="100">
+        <div class="field-error" id="err-risk">Enter 0.1 – 100</div>
+      </div>
+
+      <div class="field">
+        <label for="acc-currency">Account Currency</label>
+        <select id="acc-currency">
+          <option value="USD">USD — US Dollar</option>
+          <option value="EUR">EUR — Euro</option>
+          <option value="GBP">GBP — British Pound</option>
+          <option value="JPY">JPY — Japanese Yen</option>
+          <option value="INR">INR — Indian Rupee</option>
+          <option value="CAD">CAD — Canadian Dollar</option>
+          <option value="AUD">AUD — Australian Dollar</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Buttons Panel ── -->
+  <div class="glass-panel">
+    <div class="panel-title">Actions</div>
+    <div class="buttons-row">
+      <button class="btn btn-green" onclick="calculate('pip')">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">⚡ Pip Value</span>
+      </button>
+      <button class="btn btn-blue" onclick="calculate('pnl')">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">📊 Profit / Loss</span>
+      </button>
+      <button class="btn btn-purple" onclick="calculate('pos')">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">🎯 Position Size</span>
+      </button>
+      <button class="btn btn-reset" onclick="resetAll()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">↺ Reset</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Results Panel ── -->
+  <div class="glass-panel">
+    <div class="panel-title">Results</div>
+    <div class="results-grid">
+
+      <div class="result-card" id="card-pips">
+        <div class="scan-line"></div>
+        <span class="result-icon">📐</span>
+        <div class="result-label">Total Pips</div>
+        <div class="result-value" id="val-pips">—</div>
+        <div class="result-sub" id="sub-pips">Awaiting calculation</div>
+      </div>
+
+      <div class="result-card" id="card-pnl">
+        <div class="scan-line"></div>
+        <span class="result-icon">💰</span>
+        <div class="result-label">Profit / Loss</div>
+        <div class="result-value" id="val-pnl">—</div>
+        <div class="result-sub" id="sub-pnl">Awaiting calculation</div>
+      </div>
+
+      <div class="result-card" id="card-lot">
+        <div class="scan-line"></div>
+        <span class="result-icon">📦</span>
+        <div class="result-label">Recommended Lot</div>
+        <div class="result-value" id="val-lot">—</div>
+        <div class="result-sub" id="sub-lot">Awaiting calculation</div>
+      </div>
+
+      <div class="result-card" id="card-risk">
+        <div class="scan-line"></div>
+        <span class="result-icon">🛡️</span>
+        <div class="result-label">Risk Amount</div>
+        <div class="result-value" id="val-risk">—</div>
+        <div class="result-sub" id="sub-risk">Awaiting calculation</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+  <span>Built for Traders</span> &nbsp;·&nbsp; Forex Pips Calculator &nbsp;·&nbsp; Professional Risk Management
+</footer>
+
+<script>
+/* ───────────── Background canvas chart animation ───────────── */
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, points = [], offset = 0;
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    buildChart();
+  }
+
+  function buildChart() {
+    points = [];
+    let x = 0, y = h * 0.6;
+    const step = 6;
+    while (x < w + 200) {
+      y += (Math.random() - 0.49) * 18;
+      y = Math.max(h * 0.2, Math.min(h * 0.85, y));
+      points.push({ x, y });
+      x += step;
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    offset += 0.4;
+    if (offset > 6) { offset = 0; points.shift(); let last = points[points.length - 1]; let ny = last.y + (Math.random() - 0.49) * 18; ny = Math.max(h * 0.2, Math.min(h * 0.85, ny)); points.push({ x: last.x + 6, y: ny }); }
+
+    // Chart line
+    ctx.beginPath();
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#00ff88';
+    points.forEach((p, i) => {
+      const px = p.x - offset;
+      i === 0 ? ctx.moveTo(px, p.y) : ctx.lineTo(px, p.y);
+    });
+    ctx.stroke();
+
+    // Area fill
+    ctx.shadowBlur = 0;
+    const last = points[points.length - 1];
+    ctx.lineTo(last.x - offset, h);
+    ctx.lineTo(points[0].x - offset, h);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(0,255,136,0.06)');
+    grad.addColorStop(1, 'rgba(0,255,136,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Candles (decorative)
+    for (let i = 0; i < points.length - 4; i += 12) {
+      const px = points[i].x - offset;
+      const open = points[i].y, close = points[i + 4] ? points[i + 4].y : open;
+      const isUp = close < open;
+      const cw = 5;
+      ctx.fillStyle = isUp ? 'rgba(0,255,136,0.25)' : 'rgba(239,68,68,0.25)';
+      ctx.fillRect(px - cw / 2, Math.min(open, close), cw, Math.abs(close - open) || 1);
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+/* ───────────── Pip config per pair ───────────── */
+const PIP_CONFIG = {
+  'EUR/USD': { mult: 10000, pipVal: 10, label: '4-decimal' },
+  'GBP/USD': { mult: 10000, pipVal: 10, label: '4-decimal' },
+  'AUD/USD': { mult: 10000, pipVal: 10, label: '4-decimal' },
+  'NZD/USD': { mult: 10000, pipVal: 10, label: '4-decimal' },
+  'USD/CAD': { mult: 10000, pipVal: 10, label: '4-decimal' },
+  'USD/CHF': { mult: 10000, pipVal: 10, label: '4-decimal' },
+  'USD/JPY': { mult: 100,   pipVal: 9.1, label: 'JPY pair' },
+  'EUR/JPY': { mult: 100,   pipVal: 9.1, label: 'JPY pair' },
+  'GBP/JPY': { mult: 100,   pipVal: 9.1, label: 'JPY pair' },
+  'XAU/USD': { mult: 10,    pipVal: 1,   label: 'Gold' },
+  'XAG/USD': { mult: 100,   pipVal: 5,   label: 'Silver' },
+  'BTC/USD': { mult: 1,     pipVal: 1,   label: 'Crypto' },
+  'ETH/USD': { mult: 1,     pipVal: 1,   label: 'Crypto' },
+};
+
+/* ───────────── Toast ───────────── */
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  t.innerHTML = `<span>${icons[type] || '📢'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  if (typeof AudioContext !== 'undefined') trySound(type);
+  setTimeout(() => {
+    t.classList.add('fadeOut');
+    setTimeout(() => t.remove(), 320);
+  }, 3200);
+}
+
+/* ───────────── Sound ───────────── */
+function trySound(type) {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.frequency.value = type === 'error' ? 220 : type === 'info' ? 660 : 880;
+    o.type = 'sine';
+    g.gain.setValueAtTime(0.08, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.25);
+    o.start(ac.currentTime);
+    o.stop(ac.currentTime + 0.25);
+  } catch (e) {}
+}
+
+/* ───────────── Validation ───────────── */
+function getVal(id) { return parseFloat(document.getElementById(id).value); }
+function markError(id, errId, show) {
+  const el = document.getElementById(id);
+  const er = document.getElementById(errId);
+  el.classList.toggle('error', show);
+  if (er) er.style.display = show ? 'block' : 'none';
+}
+
+function validate(fields) {
+  let ok = true;
+  fields.forEach(f => {
+    const v = getVal(f.id);
+    const bad = isNaN(v) || v <= 0 || (f.max && v > f.max);
+    markError(f.id, f.err, bad);
+    if (bad) ok = false;
+  });
+  return ok;
+}
+
+/* ───────────── Button loading state ───────────── */
+function setLoading(btn, state) {
+  btn.classList.toggle('loading', state);
+  btn.disabled = state;
+}
+
+/* ───────────── Update result card ───────────── */
+function setCard(cardId, valId, subId, value, sub, isNeg) {
+  const card = document.getElementById(cardId);
+  const val = document.getElementById(valId);
+  const s = document.getElementById(subId);
+  card.classList.add('active');
+  card.classList.toggle('loss', isNeg === true);
+  val.textContent = value;
+  val.className = 'result-value' + (isNeg === false ? ' positive' : isNeg === true ? ' negative' : '');
+  s.textContent = sub;
+}
+
+/* ───────────── Main calculate function ───────────── */
+function calculate(mode) {
+  const btn = event.currentTarget;
+  const pair = document.getElementById('pair').value;
+  const cfg = PIP_CONFIG[pair] || { mult: 10000, pipVal: 10, label: '' };
+  const accCur = document.getElementById('acc-currency').value;
+
+  if (mode === 'pip') {
+    const ok = validate([
+      { id: 'entry', err: 'err-entry' },
+      { id: 'exit',  err: 'err-exit' },
+      { id: 'lot-size', err: 'err-lot' },
+    ]);
+    if (!ok) { showToast('Please fix input errors first.', 'error'); return; }
+
+    setLoading(btn, true);
+    setTimeout(() => {
+      const entry = getVal('entry'), exit = getVal('exit'), lot = getVal('lot-size');
+      const pips = (exit - entry) * cfg.mult;
+      const pipValTotal = Math.abs(pips) * lot * cfg.pipVal;
+      const isNeg = pips < 0;
+
+      setCard('card-pips', 'val-pips', 'sub-pips',
+        (pips >= 0 ? '+' : '') + pips.toFixed(1) + ' pips',
+        `${pair} · ${cfg.label}`,
+        isNeg);
+      setCard('card-pnl', 'val-pnl', 'sub-pnl',
+        (isNeg ? '-' : '+') + accCur + ' ' + pipValTotal.toFixed(2),
+        `${lot} lot · pip value ≈ ${cfg.pipVal}`,
+        isNeg);
+
+      setLoading(btn, false);
+      showToast(`Pip calculation complete for ${pair}`, 'success');
+    }, 700);
+  }
+
+  else if (mode === 'pnl') {
+    const ok = validate([
+      { id: 'entry',    err: 'err-entry' },
+      { id: 'exit',     err: 'err-exit' },
+      { id: 'lot-size', err: 'err-lot' },
+    ]);
+    if (!ok) { showToast('Please fix input errors first.', 'error'); return; }
+
+    setLoading(btn, true);
+    setTimeout(() => {
+      const entry = getVal('entry'), exit = getVal('exit'), lot = getVal('lot-size');
+      const pips = (exit - entry) * cfg.mult;
+      const pnl = pips * lot * cfg.pipVal;
+      const isNeg = pnl < 0;
+
+      setCard('card-pips', 'val-pips', 'sub-pips',
+        (pips >= 0 ? '+' : '') + pips.toFixed(1) + ' pips',
+        `${pair} move`,
+        pips < 0);
+      setCard('card-pnl', 'val-pnl', 'sub-pnl',
+        (isNeg ? '-' : '+') + accCur + ' ' + Math.abs(pnl).toFixed(2),
+        isNeg ? 'Position at a loss' : 'Position in profit',
+        isNeg);
+
+      setLoading(btn, false);
+      showToast(isNeg ? 'Loss calculated 📉' : 'Profit calculated 📈', isNeg ? 'error' : 'success');
+    }, 700);
+  }
+
+  else if (mode === 'pos') {
+    const ok = validate([
+      { id: 'balance',  err: 'err-balance' },
+      { id: 'risk',     err: 'err-risk', max: 100 },
+      { id: 'entry',    err: 'err-entry' },
+      { id: 'exit',     err: 'err-exit' },
+    ]);
+    if (!ok) { showToast('Please fix input errors first.', 'error'); return; }
+
+    setLoading(btn, true);
+    setTimeout(() => {
+      const balance = getVal('balance'), riskPct = getVal('risk');
+      const entry = getVal('entry'), exit = getVal('exit');
+      const riskAmt = balance * (riskPct / 100);
+      const slPips = Math.abs((exit - entry) * cfg.mult);
+      const posSize = slPips > 0 ? riskAmt / (slPips * cfg.pipVal) : 0;
+
+      setCard('card-risk', 'val-risk', 'sub-risk',
+        accCur + ' ' + riskAmt.toFixed(2),
+        `${riskPct}% of ${accCur} ${balance.toLocaleString()}`,
+        false);
+      setCard('card-lot', 'val-lot', 'sub-lot',
+        posSize.toFixed(2) + ' lots',
+        `SL distance: ${slPips.toFixed(1)} pips`,
+        false);
+
+      setLoading(btn, false);
+      showToast(`Position size: ${posSize.toFixed(2)} lots · Risk: ${accCur} ${riskAmt.toFixed(2)}`, 'info');
+    }, 700);
+  }
+}
+
+/* ───────────── Reset ───────────── */
+function resetAll() {
+  ['lot-size','entry','exit','balance','risk'].forEach(id => {
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('error');
+  });
+  ['err-lot','err-entry','err-exit','err-balance','err-risk'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  ['card-pips','card-pnl','card-lot','card-risk'].forEach(id => {
+    document.getElementById(id).classList.remove('active','loss');
+  });
+  ['val-pips','val-pnl','val-lot','val-risk'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+    document.getElementById(id).className = 'result-value';
+  });
+  ['sub-pips','sub-pnl','sub-lot','sub-risk'].forEach(id => {
+    document.getElementById(id).textContent = 'Awaiting calculation';
+  });
+  showToast('All fields cleared.', 'info');
+}
+
+/* ───────────── Real-time pair validation hint ───────────── */
+document.getElementById('pair').addEventListener('change', function() {
+  const cfg = PIP_CONFIG[this.value];
+  if (cfg) showToast(`${this.value} loaded · ${cfg.label}`, 'info');
+});
+</script>
+
+</body>
+</html>
